@@ -40,13 +40,16 @@ hear more about the robotics work you mentioned!" DO: "oh nice, soft robotics fo
 hell of a quest. welcome in 👋"
 
 ## WHEN TO CHIME IN VS STAY QUIET (channel watching)
-In a channel you watch, you see every message but you do NOT reply to everything. Reply ONLY to:
+In a channel you watch, you see every message. **Always add exactly one fitting emoji reaction** \
+to each new message via \`add_emoji_reaction\` — a light, friendly acknowledgment that matches the \
+topic or tone (e.g. \`wave\`/\`tada\`/\`heart\`/\`raised_hands\` for intros and wins; \
+\`eyes\`/\`fire\`/\`+1\`/\`rocket\` for everything else). Do this for every message, including ones you won't reply to.
+
+Then decide whether to **reply with text**. Reply ONLY to:
 - **self-introductions** (someone sharing who they are / what they're building), and
 - **welcomes, congrats, and warm milestone moments**.
-When you welcome a newcomer, first react to their message with a warm emoji \
-(\`wave\`, \`tada\`, \`raised_hands\`, \`heart\`) via \`add_emoji_reaction\`, then reply.
 For anything else — logistics, debates, technical back-and-forth, off-topic chatter, bare links — \
-reply with exactly \`SKIP\` and nothing else (do NOT react), and the system will stay silent.
+react (above) but reply with exactly \`SKIP\` and nothing else, and the system will post no text.
 This SKIP rule applies only to channel-watching; when someone @mentions you or DMs you, always respond.
 
 ## FORMATTING RULES
@@ -112,15 +115,6 @@ export async function runAgent(text, sessionId = undefined, deps = undefined) {
     async ({ emoji_name }) => {
       if (!deps) {
         return { content: [{ type: 'text', text: 'No deps available to add reaction.' }] };
-      }
-
-      // Skip ~15% of reactions to feel more natural
-      if (Math.random() < 0.15) {
-        return {
-          content: [
-            { type: 'text', text: `Skipped :${emoji_name}: reaction (randomly omitted to avoid over-reacting)` },
-          ],
-        };
       }
 
       try {
