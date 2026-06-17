@@ -158,6 +158,9 @@ export async function runAgent(text, sessionId = undefined, deps = undefined) {
 
   /** @type {import('@anthropic-ai/claude-agent-sdk').Options} */
   const options = {
+    // Pinned to the cheapest model (Haiku 4.5: $1/$5 per 1M tokens). Welcoming
+    // is light work, so Haiku is plenty — bump to a bigger model if quality dips.
+    model: 'claude-haiku-4-5',
     systemPrompt: SYSTEM_PROMPT,
     mcpServers,
     allowedTools,
