@@ -11,6 +11,26 @@ function isGenericMessageEvent(event) {
 }
 
 /**
+ * Whether Buddy has already posted in this thread. Used as a restart-proof
+ * fallback when the in-memory session record is gone, so follow-up replies in a
+ * thread Buddy is part of still get answered (without jumping into other threads).
+ * @param {import('@slack/web-api').WebClient} client
+ * @param {string | undefined} botUserId
+ * @param {string} channel
+ * @param {string} threadTs
+ * @returns {Promise<boolean>}
+ */
+async function botPostedInThread(client, botUserId, channel, threadTs) {
+  if (!botUserId) return false;
+  try {
+    const res = await client.conversations.replies({ channel, ts: threadTs, limit: 200 });
+    return (res.messages || []).some((m) => m.user === botUserId);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Handle messages sent to the agent via DM or in threads the bot is part of.
  * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackEventMiddlewareArgs<'message'>} args
  * @returns {Promise<void>}
@@ -28,9 +48,14 @@ export async function handleMessage({ client, context, event, logger, say, saySt
   if (isDm) {
     // DMs are always handled
   } else if (isThreadReply) {
-    // Channel thread replies are handled only if the bot is already engaged
-    const session = sessionStore.getSession(event.channel, /** @type {string} */ (event.thread_ts));
-    if (session === null) return;
+    // Channel thread replies are handled when Buddy is part of the thread.
+    // Fast path: an in-memory session. Restart-proof fallback: check whether
+    // Buddy actually posted in this thread before answering.
+    const tts = /** @type {string} */ (event.thread_ts);
+    const hasSession = sessionStore.getSession(event.channel, tts) !== null;
+    if (!hasSession && !(await botPostedInThread(client, context.botUserId, event.channel, tts))) {
+      return;
+    }
   } else {
     // Top-level channel messages are handled by app_mentioned
     return;
