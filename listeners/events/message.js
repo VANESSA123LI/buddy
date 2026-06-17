@@ -51,6 +51,10 @@ export async function handleMessage({ client, context, event, logger, say, saySt
   // top-level post and only greets newcomers / joins welcomes. The agent replies
   // "SKIP" for anything else, which we suppress. @mentions and DMs are unaffected.
   if (isWelcomeChannel && !isDm && !isThreadReply) {
+    // Only welcome FRESH posts in real time — never react to old or re-delivered
+    // events. Anything older than 10 minutes is left to the one-time backfill.
+    const ageSec = Date.now() / 1000 - Number(event.ts);
+    if (Number.isFinite(ageSec) && ageSec > 600) return;
     try {
       const deps = {
         client,
