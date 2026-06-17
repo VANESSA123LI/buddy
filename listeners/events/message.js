@@ -46,12 +46,18 @@ export async function handleMessage({ client, context, event, logger, say, saySt
   const isThreadReply = !!event.thread_ts;
   const isWelcomeChannel =
     !!process.env.BUDDY_WELCOME_CHANNEL_ID && event.channel === process.env.BUDDY_WELCOME_CHANNEL_ID;
+  // Comma-separated channel IDs where Buddy reacts to every message but never replies.
+  const reactOnlyChannels = (process.env.BUDDY_REACT_CHANNEL_IDS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const isReactOnlyChannel = reactOnlyChannels.includes(event.channel);
 
-  // Community-host mode: in the designated welcome channel, Buddy reads each new
-  // top-level post and only greets newcomers / joins welcomes. The agent replies
-  // "SKIP" for anything else, which we suppress. @mentions and DMs are unaffected.
-  if (isWelcomeChannel && !isDm && !isThreadReply) {
-    // Only welcome FRESH posts in real time — never react to old or re-delivered
+  // Channel-watching: in the welcome channel Buddy reacts + greets newcomers; in
+  // react-only channels (e.g. #random) it reacts to every message and never posts
+  // text. The emoji reaction happens inside runAgent via the add_emoji_reaction tool.
+  if ((isWelcomeChannel || isReactOnlyChannel) && !isDm && !isThreadReply) {
+    // Only handle FRESH posts in real time — never react to old or re-delivered
     // events. Anything older than 10 minutes is left to the one-time backfill.
     const ageSec = Date.now() / 1000 - Number(event.ts);
     if (Number.isFinite(ageSec) && ageSec > 600) return;
@@ -65,11 +71,13 @@ export async function handleMessage({ client, context, event, logger, say, saySt
         userToken: context.userToken,
       };
       const { responseText } = await runAgent(event.text || '', undefined, deps);
+      // React-only channels: the reaction already happened; never post text.
+      if (isReactOnlyChannel && !isWelcomeChannel) return;
       const reply = (responseText || '').trim();
       if (!reply || reply.replace(/[^a-zA-Z]/g, '').toUpperCase() === 'SKIP') return;
       await say({ text: reply, thread_ts: event.ts });
     } catch (e) {
-      logger.error(`Failed to handle welcome message: ${e}`);
+      logger.error(`Failed to handle channel-watch message: ${e}`);
     }
     return;
   }
