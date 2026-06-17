@@ -44,6 +44,31 @@ export async function handleMessage({ client, context, event, logger, say, saySt
 
   const isDm = event.channel_type === 'im';
   const isThreadReply = !!event.thread_ts;
+  const isWelcomeChannel =
+    !!process.env.BUDDY_WELCOME_CHANNEL_ID && event.channel === process.env.BUDDY_WELCOME_CHANNEL_ID;
+
+  // Community-host mode: in the designated welcome channel, Buddy reads each new
+  // top-level post and only greets newcomers / joins welcomes. The agent replies
+  // "SKIP" for anything else, which we suppress. @mentions and DMs are unaffected.
+  if (isWelcomeChannel && !isDm && !isThreadReply) {
+    try {
+      const deps = {
+        client,
+        userId: /** @type {string} */ (context.userId),
+        channelId: event.channel,
+        threadTs: event.ts,
+        messageTs: event.ts,
+        userToken: context.userToken,
+      };
+      const { responseText } = await runAgent(event.text || '', undefined, deps);
+      const reply = (responseText || '').trim();
+      if (!reply || reply.replace(/[^a-zA-Z]/g, '').toUpperCase() === 'SKIP') return;
+      await say({ text: reply, thread_ts: event.ts });
+    } catch (e) {
+      logger.error(`Failed to handle welcome message: ${e}`);
+    }
+    return;
+  }
 
   if (isDm) {
     // DMs are always handled
