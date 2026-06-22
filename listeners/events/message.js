@@ -1,4 +1,5 @@
 import { runAgent } from '../../agent/index.js';
+import { handleDiscussionReply, isDiscussionThread } from '../../discussion/index.js';
 import { sessionStore } from '../../thread-context/index.js';
 import { buildFeedbackBlocks } from '../views/feedback-builder.js';
 
@@ -79,6 +80,13 @@ export async function handleMessage({ client, context, event, logger, say, saySt
     } catch (e) {
       logger.error(`Failed to handle channel-watch message: ${e}`);
     }
+    return;
+  }
+
+  // Discussion threads: when someone weighs in on one of Buddy's posted questions,
+  // Buddy replies in-thread to keep the conversation going.
+  if (isThreadReply && isDiscussionThread(event.channel, /** @type {string} */ (event.thread_ts))) {
+    await handleDiscussionReply({ client, event, logger });
     return;
   }
 

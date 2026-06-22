@@ -2,6 +2,7 @@ import 'dotenv/config';
 
 import { App, LogLevel } from '@slack/bolt';
 
+import { startDiscussions } from './discussion/index.js';
 import { registerListeners } from './listeners/index.js';
 import { startDailyIdea } from './scheduler/daily-idea.js';
 import { runWelcomeBacklog } from './welcome/backfill.js';
@@ -21,4 +22,5 @@ registerListeners(app);
   app.logger.info('Starter Agent is running!');
   startDailyIdea(app);
   runWelcomeBacklog(app);
+  startDiscussions(app);
 })();
